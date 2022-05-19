@@ -48,7 +48,7 @@ public:
 
 private:
   InterruptIn _interrupt_count;
-  InterruptIn _interrupt_stop;
+  DigitalIn _interrupt_stop;
   mbed_PWMServoDriver *_pwm;
 
   int _backward_pin;
