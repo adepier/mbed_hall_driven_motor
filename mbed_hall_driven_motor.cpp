@@ -99,7 +99,7 @@ void mbed_hall_driven_motor::init()
   // on fait tourner le moteur jusqu'a la butée
   if (_debug_flag)
   {
-    printf("run_forward %s \n", _motor_name.c_str());
+    printf("run_forward %s interrupt: %i\n", _motor_name.c_str() ,_interrupt_stop.read());
   };
   while (_interrupt_stop.read() == 1)
   {
@@ -108,7 +108,7 @@ void mbed_hall_driven_motor::init()
   motor_stop();
   if (_debug_flag)
   {
-    printf("stop %s : on attends une seconde pour stabiliser le moteur \n ", _motor_name.c_str());
+    printf("stop %s : on attends une seconde pour stabiliser le moteur, interrupt: %i \n ", _motor_name.c_str(),_interrupt_stop.read());
   };                                                 // on arrete le moteur
   ThisThread::sleep_for(chrono::milliseconds(1000)); // on attend une seconde pour stabiliser le moteur
 
