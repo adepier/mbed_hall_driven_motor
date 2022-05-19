@@ -34,7 +34,8 @@ mbed_hall_driven_motor::mbed_hall_driven_motor(Count_pin count_pin,
                                                Coef_Kp coef_Kp,
                                                Coef_Ki coef_Ki,
                                                Coef_Kd coef_Kd,
-                                               Nb_tic_per_deg nb_tic_per_deg)
+                                               Nb_tic_per_deg nb_tic_per_deg,
+                                               End_stop_type end_stop_type)
     : _interrupt_count(count_pin.get(), PullDown),
       _interrupt_stop(stop_pin.get(), PullDown),
       _pwm(&pwm),
@@ -69,7 +70,7 @@ mbed_hall_driven_motor::mbed_hall_driven_motor(Count_pin count_pin,
 
   _flag_start = flag_start.get();
   _flag_stop = flag_stop.get();
-
+_end_stop_type = end_stop_type.get();
   // définit la valeur par défaut
   _debug_flag = false;
 }
@@ -101,7 +102,7 @@ void mbed_hall_driven_motor::init()
   {
     printf("run_forward %s interrupt: %i\n", _motor_name.c_str() ,_interrupt_stop.read());
   };
-  while (_interrupt_stop.read() == 1)
+  while (_interrupt_stop.read() == _end_stop_type   )
   {
     motor_run_forward(_init_speed);
   }
@@ -117,7 +118,7 @@ void mbed_hall_driven_motor::init()
   {
     printf("run_backward %s : on repart tout doucement pour que l'init soit juste après la butée \n ", _motor_name.c_str());
   };
-  while (_interrupt_stop.read() == 0)
+  while (_interrupt_stop.read() != _end_stop_type)
   {
     motor_run_backward(_init_speed / 2);
   }

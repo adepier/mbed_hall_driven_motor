@@ -26,7 +26,8 @@ public:
                     Coef_Kp coef_Kp,
                     Coef_Ki coef_Ki,
                     Coef_Kd coef_Kd,
-                    Nb_tic_per_deg nb_tic_per_deg );
+                    Nb_tic_per_deg nb_tic_per_deg ,
+                    End_stop_type end_stop_type);
 
   // interruptions
   void increment();
@@ -76,6 +77,7 @@ private:
 
   int _max_speed;
   int _min_speed;
+  int _end_stop_type;
 
   // int _cmde_flag_start;
   // int _cmde_flag_stop;

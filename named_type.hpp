@@ -22,6 +22,7 @@ using Coef_Kp = fluent::NamedType< double, struct Coef_KpTag>;                  
 using Coef_Ki = fluent::NamedType< double, struct Coef_KiTag>;                         //PID coef integral
 using Coef_Kd = fluent::NamedType< double, struct Coef_KdTag>;                         //PID coef dérivée
 using Nb_tic_per_deg = fluent::NamedType< double, struct Nb_tic_per_degTag>;           // nombre de tic par tour pour calculer l'angle 
+using End_stop_type = fluent::NamedType< int, struct End_stop_typeTag>;           // 0 : end stop a 0 au repos / 1: end stop a 1 au repos
 
 //     int motor_shield_type,
 //     int32_t flag_start,
@@ -49,3 +50,4 @@ static const Coef_Kp::argument coef_Kp;
 static const Coef_Ki::argument coef_Ki;
 static const Coef_Kd::argument coef_Kd;
 static const Nb_tic_per_deg::argument nb_tic_per_deg; 
+static const End_stop_type::argument end_stop_type; 
