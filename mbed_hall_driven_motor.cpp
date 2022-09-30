@@ -37,7 +37,7 @@ mbed_hall_driven_motor::mbed_hall_driven_motor(Count_pin count_pin,
                                                Nb_tic_per_deg nb_tic_per_deg,
                                                End_stop_type end_stop_type)
     : _interrupt_count(count_pin.get(), PullDown),
-      _interrupt_stop(stop_pin.get(), PullDown),
+      _interrupt_stop(stop_pin.get(), PullNone),
       _pwm(&pwm),
       _PID(&Input, &Output, &Setpoint, coef_Kp.get(), coef_Ki.get(), coef_Kd.get(), P_ON_E, DIRECT)
 
@@ -98,6 +98,9 @@ void mbed_hall_driven_motor::init()
   // _interrupt_stop.enable_irq(); // --> on allume la lecture de la butée
   // _interrupt_stop.read() == 1 --> en butée
   // on fait tourner le moteur jusqu'a la butée
+  if(_end_stop_type==0){_interrupt_stop.mode(PullDown);}
+    // on fait tourner le moteur jusqu'a la butée
+  if(_end_stop_type==1){_interrupt_stop.mode(PullUp);}
   if (_debug_flag)
   {
     printf("run_forward %s interrupt: %i\n", _motor_name.c_str() ,_interrupt_stop.read());
