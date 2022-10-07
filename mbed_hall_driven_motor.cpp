@@ -126,7 +126,7 @@ void mbed_hall_driven_motor::init()
     motor_run_backward(_init_speed / 2);
   }
   motor_stop(); // on arrete le moteur
-  // _interrupt_stop.disable_irq(); // --> on eteint la lecture de la butée
+  //_interrupt_stop.disable_irq(); // --> on eteint la lecture de la butée
 
   // on initialise les variables
   previous_speed = 0;
