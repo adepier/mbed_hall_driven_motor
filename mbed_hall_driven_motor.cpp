@@ -78,16 +78,20 @@ _end_stop_type = end_stop_type.get();
 //****************** interruptions
 void mbed_hall_driven_motor::increment()
 {
-  if (_sens)
+//on ne compte que lorsque le moteur est démarré
+  if (_flag_is_running)
   {
-    _count++;
+    if (_sens)
+    {
+      _count++;
+    }
+    else
+    {
+      _count--;
+    };
+    // met à jour l'angle du moteur
+    _angle = _count / _nb_tic_per_deg;
   }
-  else
-  {
-    _count--;
-  };
-  // met à jour l'angle du moteur
-  _angle = _count / _nb_tic_per_deg;
 }
 
 //********************** methodes publiques
@@ -137,7 +141,8 @@ void mbed_hall_driven_motor::init()
   _sens = true;
   _PID.SetOutputLimits(_min_speed, _max_speed);
   _PID.SetMode(1);
-
+ // on ne compte plus pour éviter de compter les interférences
+_flag_is_running=false;
   // log
   printf("fin init %s\n", _motor_name.c_str());
 }
@@ -157,7 +162,8 @@ void mbed_hall_driven_motor::set_speed_sync(mbed_hall_driven_motor *pSynchronise
 
 void mbed_hall_driven_motor::run()
 {
-
+// on met le flag _flag_is_running pour démarrer le compteur
+_flag_is_running=true;
   _deplacement = _target - _angle; // au demarrage on calcul le deplacement pour la synchro
   _start_angle = _angle;           // on enregistre la position des moteurs liés au demarrage
   previous_speed = 0;
@@ -207,6 +213,8 @@ void mbed_hall_driven_motor::run()
   {
     printf("fin target moteur : angle %f\n", _angle);
   }
+  // on ne compte plus pour éviter de compter les interférences
+_flag_is_running=false;
 }
 //********************** methodes privées
 

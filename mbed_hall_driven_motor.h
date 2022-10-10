@@ -61,7 +61,7 @@ private:
   double _count;
   
   
-  
+  bool _flag_is_running;
   double _flag_sens;
   bool _flag_speed_sync;
   int Nb_Motor_sync = 0;
