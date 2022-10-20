@@ -73,24 +73,36 @@ mbed_hall_driven_motor::mbed_hall_driven_motor(Count_pin count_pin,
 _end_stop_type = end_stop_type.get();
   // définit la valeur par défaut
   _debug_flag = false;
+  timer.start();
+previous_time= timer.read_us();
+
 }
 
 //****************** interruptions
 void mbed_hall_driven_motor::increment()
 {
-//on ne compte que lorsque le moteur est démarré
+  // on ne compte que lorsque le moteur est démarré
   if (_flag_is_running)
   {
-    if (_sens)
+    // pour filtrer les interferences, on ne peu pas dépasser les 130Hz => période=770us / 16 impulsions par tour -> 48us
+    //il faudrait le lier a la vitesse du moteur
+
+    int current_time = timer.read_us();
+
+    if (current_time > (previous_time +  40 ))
     {
-      _count++;
+      previous_time = current_time;
+      if (_sens)
+      {
+        _count++;
+      }
+      else
+      {
+        _count--;
+      };
+      // met à jour l'angle du moteur
+      _angle = _count / _nb_tic_per_deg;
     }
-    else
-    {
-      _count--;
-    };
-    // met à jour l'angle du moteur
-    _angle = _count / _nb_tic_per_deg;
   }
 }
 

@@ -62,6 +62,8 @@ private:
   
   
   bool _flag_is_running;
+  Timer   timer;
+  int  previous_time; 
   double _flag_sens;
   bool _flag_speed_sync;
   int Nb_Motor_sync = 0;
