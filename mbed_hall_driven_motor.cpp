@@ -2,7 +2,8 @@
 
 /*!
  *  @brief constructeur
- *  @param count_pin
+ *  @param count_1_pin
+ *  @param count_2_pin
  *  @param stop_pin
  *  @param pwm
  *  @param forward_pin
@@ -18,8 +19,9 @@
    PullNone          = 0,
     PullUp            = 1,
     PullDown          = 2,
- */
-mbed_hall_driven_motor::mbed_hall_driven_motor(Count_pin count_pin,
+ */ /**/
+mbed_hall_driven_motor::mbed_hall_driven_motor(PinName count_1_pin,
+                                               PinName count_2_pin,
                                                Stop_pin stop_pin,
                                                mbed_PWMServoDriver &pwm,
                                                Forward_or_dir_pin forward_or_dir_pin,
@@ -36,21 +38,28 @@ mbed_hall_driven_motor::mbed_hall_driven_motor(Count_pin count_pin,
                                                Coef_Kd coef_Kd,
                                                Nb_tic_per_deg nb_tic_per_deg,
                                                End_stop_type end_stop_type)
-    : _interrupt_count(count_pin.get(), PullDown),
-      _interrupt_stop(stop_pin.get(), PullNone),
+    : _interrupt_count_1(count_1_pin, PullDown),_interrupt_count_2(count_2_pin, PullDown),
+      _DigitalIn_stop(stop_pin.get(), PullNone),
       _pwm(&pwm),
       _PID(&Input, &Output, &Setpoint, coef_Kp.get(), coef_Ki.get(), coef_Kd.get(), P_ON_E, DIRECT)
 
 {
 
   // create the InterruptIn on the pin specified to Counter
-  _interrupt_count.fall(callback(
-      this, &mbed_hall_driven_motor::increment)); // attach increment function of
+  _interrupt_count_1.rise(callback( this, &mbed_hall_driven_motor::increment)); // attach increment function of
+                                                                               // this counter instance
+  _interrupt_count_1.fall(callback(
+      this, &mbed_hall_driven_motor::fall_1)); // attach increment function of
                                                   // this counter instance
-  _interrupt_count.rise(callback(
-      this, &mbed_hall_driven_motor::increment)); // attach increment function of
-                                                  // this counter instance
-  _motor_shield_type = motor_shield_type.get();
+
+  // _interrupt_count_2.fall(callback(
+  //     this, &mbed_hall_driven_motor::fall_2)); // attach increment function of
+  //                                                 // this counter instance
+  // _interrupt_count_2.rise(callback(
+  //     this, &mbed_hall_driven_motor::rise_2)); // attach increment function of
+  //                                                 // this counter instance
+  
+   _motor_shield_type = motor_shield_type.get();
   if (_motor_shield_type == 1)
   {
     _dir_pin = forward_or_dir_pin.get();
@@ -75,35 +84,55 @@ _end_stop_type = end_stop_type.get();
   _debug_flag = false;
   timer.start();
 previous_time= timer.read_us();
+ 
 
 }
 
 //****************** interruptions
+/*principe:
+il y a 2 compteurs 1 et 2
+on dit compteur 1 rise = 0 / fall = 10
+on dit compteur 2 rise = 21 / fall = 20
+
+seul le compteur 1 rise augmente le compteur
+dans le sens aller, on doit avoir la trame :  0 -> 21 -> 10 -> 20 =>  51
+dans le sens retour, on doit avoir la trame : 0 -> 20 -> 10 -> 21 =>  51
+
+*/
+void mbed_hall_driven_motor::fall_1()
+{
+      if (tic_forward==21) {tic_forward=31; };
+      if (tic_backward==20) {tic_backward=30; };
+}
+void mbed_hall_driven_motor::fall_2()
+{
+   if (tic_forward==31) {tic_forward=51; };
+   if (tic_backward==0) {tic_backward=20; };
+     
+}
+
+void mbed_hall_driven_motor::rise_2()
+{
+   if (tic_forward==0) {tic_forward=21 ;};
+   if (tic_backward==30) {tic_backward=51; };
+     
+}
+
 void mbed_hall_driven_motor::increment()
 {
-  // on ne compte que lorsque le moteur est démarré
-  if (_flag_is_running)
-  {
-    // pour filtrer les interferences, on ne peu pas dépasser les 130Hz => période=770us / 16 impulsions par tour -> 48us
-    //il faudrait le lier a la vitesse du moteur
-
-    int current_time = timer.read_us();
-
-    if (current_time > (previous_time +  40 ))
-    {
-      previous_time = current_time;
-      if (_sens)
+      //on est arrivé a bout de la trame, on incremente le compteur
+      if (tic_forward==51){_count++;};
+      if (tic_backward==51){_count--;};
+      
+      //si le compteur a été incrémenté, on remet tout a zéro
+      if (tic_forward==51 || tic_backward==51)
       {
-        _count++;
+            // met à jour l'angle du moteur
+          _angle = _count / _nb_tic_per_deg;
+          //RAZ des tic
+          tic_forward =0;
+          tic_backward =0;  
       }
-      else
-      {
-        _count--;
-      };
-      // met à jour l'angle du moteur
-      _angle = _count / _nb_tic_per_deg;
-    }
-  }
 }
 
 //********************** methodes publiques
@@ -111,24 +140,24 @@ void mbed_hall_driven_motor::increment()
 void mbed_hall_driven_motor::init()
 {
   printf("init %s\n", _motor_name.c_str());
-  // _interrupt_stop.enable_irq(); // --> on allume la lecture de la butée
-  // _interrupt_stop.read() == 1 --> en butée
+  // _DigitalIn_stop.enable_irq(); // --> on allume la lecture de la butée
+  // _DigitalIn_stop.read() == 1 --> en butée
   // on fait tourner le moteur jusqu'a la butée
-  if(_end_stop_type==0){_interrupt_stop.mode(PullDown);}
+  if(_end_stop_type==0){_DigitalIn_stop.mode(PullDown);}
     // on fait tourner le moteur jusqu'a la butée
-  if(_end_stop_type==1){_interrupt_stop.mode(PullUp);}
+  if(_end_stop_type==1){_DigitalIn_stop.mode(PullUp);}
   if (_debug_flag)
   {
-    printf("run_forward %s interrupt: %i\n", _motor_name.c_str() ,_interrupt_stop.read());
+    printf("run_forward %s interrupt: %i\n", _motor_name.c_str() ,_DigitalIn_stop.read());
   };
-  while (_interrupt_stop.read() == _end_stop_type   )
+  while (_DigitalIn_stop.read() == _end_stop_type   )
   {
     motor_run_forward(_init_speed);
   }
   motor_stop();
   if (_debug_flag)
   {
-    printf("stop %s : on attends une seconde pour stabiliser le moteur, interrupt: %i \n ", _motor_name.c_str(),_interrupt_stop.read());
+    printf("stop %s : on attends une seconde pour stabiliser le moteur, interrupt: %i \n ", _motor_name.c_str(),_DigitalIn_stop.read());
   };                                                 // on arrete le moteur
   ThisThread::sleep_for(chrono::milliseconds(1000)); // on attend une seconde pour stabiliser le moteur
 
@@ -137,18 +166,21 @@ void mbed_hall_driven_motor::init()
   {
     printf("run_backward %s : on repart tout doucement pour que l'init soit juste après la butée \n ", _motor_name.c_str());
   };
-  while (_interrupt_stop.read() != _end_stop_type)
+  while (_DigitalIn_stop.read() != _end_stop_type)
   {
     motor_run_backward(_init_speed / 2);
   }
   motor_stop(); // on arrete le moteur
-  //_interrupt_stop.disable_irq(); // --> on eteint la lecture de la butée
+  //_DigitalIn_stop.disable_irq(); // --> on eteint la lecture de la butée
+
+ThisThread::sleep_for(chrono::milliseconds(1000)); // on attend une seconde pour stabiliser le moteur
 
   // on initialise les variables
   previous_speed = 0;
 
   _flag_speed_sync = false;
   _count = 0;
+  _debug_count_when_stoped=0;
   _angle = 0;
   _sens = true;
   _PID.SetOutputLimits(_min_speed, _max_speed);
@@ -156,7 +188,7 @@ void mbed_hall_driven_motor::init()
  // on ne compte plus pour éviter de compter les interférences
 _flag_is_running=false;
   // log
-  printf("fin init %s\n", _motor_name.c_str());
+  printf("fin init %s count %f\n", _motor_name.c_str(),_count);
 }
 
 void mbed_hall_driven_motor::set_speed_sync(mbed_hall_driven_motor *pSynchronised_motor)
@@ -200,7 +232,7 @@ _flag_is_running=true;
       {
         printf("   backward\n");
       }
-      _sens = true; // true = forward / false = backward
+      
       motor_run_backward(speed);
     }
   }
@@ -215,7 +247,7 @@ _flag_is_running=true;
       {
         printf("   forward\n");
       }
-      _sens = false; // true = forward / false = backward
+      
       motor_run_forward(speed);
     }
   };
@@ -367,6 +399,8 @@ double mbed_hall_driven_motor::get_speed_coef(double pTarget)
 
 void mbed_hall_driven_motor::motor_run_forward(double speed)
 {
+
+  _sens = false; // false = forward / true = backward
   // la vitesse max est 4095
   if (speed > 4095)
   {
@@ -387,6 +421,7 @@ void mbed_hall_driven_motor::motor_run_forward(double speed)
 }
 void mbed_hall_driven_motor::motor_run_backward(double speed)
 {
+  _sens = true  ; // false = forward / true = backward
   // la vitesse max est 4095
   if (speed > 4095)
   {

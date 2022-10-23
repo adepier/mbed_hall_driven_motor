@@ -2,6 +2,7 @@
 #include "mbed.h"
 #include "named_type.hpp"
 #include "PID_v1.h"
+#include "PinNames.h"
 // #include "MotorConfig/MotorConfig.h"
 
 /*!
@@ -11,7 +12,8 @@
 class mbed_hall_driven_motor
 {
 public:
-  mbed_hall_driven_motor(Count_pin count_pin,
+  mbed_hall_driven_motor(PinName count_1_pin,
+                    PinName count_2_pin,
                     Stop_pin stop_pin,
                     mbed_PWMServoDriver &pwm,
                     Forward_or_dir_pin forward_or_dir_pin,
@@ -31,7 +33,9 @@ public:
 
   // interruptions
   void increment();
-
+ void fall_1();
+  void fall_2();
+   void rise_2();
   // methodes
   void run();
   void init();
@@ -46,10 +50,13 @@ public:
   double _start_angle;
   double _target;
   bool _debug_flag;
+  double _debug_count_when_stoped; 
+ volatile int  _count;
 
 private:
-  InterruptIn _interrupt_count;
-  DigitalIn _interrupt_stop;
+  InterruptIn _interrupt_count_1;
+  InterruptIn _interrupt_count_2;
+  DigitalIn _DigitalIn_stop;
   mbed_PWMServoDriver *_pwm;
 
   int _backward_pin;
@@ -57,8 +64,8 @@ private:
   int _dir_pin;
   int _pwm_pin;
   bool _sens;
-  
-  double _count;
+  int tic_forward=0;
+  int tic_backward=0;
   
   
   bool _flag_is_running;

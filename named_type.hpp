@@ -7,7 +7,7 @@
 // static const FirstName::argument firstName;
 // static const LastName::argument lastName;
 
-using Count_pin = fluent::NamedType<PinName, struct Count_pinTag>;                         //pin compteur de tour
+using Count_1_pin = fluent::NamedType<PinName, struct Count_1_pinTag>;                         //pin compteur de tour
 using Stop_pin = fluent::NamedType<PinName, struct Stop_pinTag>;                           //pin de fin de course
 using Forward_or_dir_pin = fluent::NamedType<int, struct Forward_or_dir_pinTag>;       //pin de commande de la direction du moteur
 using Backward_or_speed_pin = fluent::NamedType<int, struct Backward_or_speed_pinTag>; //pin de commande de la vitesse du moteur
@@ -35,7 +35,7 @@ using End_stop_type = fluent::NamedType< int, struct End_stop_typeTag>;         
 //     double coef_Kd,            //PID coef dérivée
 //     double nb_tic_per_deg      // nombre de tic par tour pour calculer l'angle
 
-static const Count_pin::argument count_pin;
+static const Count_1_pin::argument count_1_pin;
 static const Stop_pin::argument stop_pin;
 static const Forward_or_dir_pin::argument forward_or_dir_pin;
 static const Backward_or_speed_pin::argument backward_or_speed_pin;
