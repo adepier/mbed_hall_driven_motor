@@ -52,12 +52,12 @@ mbed_hall_driven_motor::mbed_hall_driven_motor(PinName count_1_pin,
       this, &mbed_hall_driven_motor::fall_1)); // attach increment function of
                                                   // this counter instance
 
-  // _interrupt_count_2.fall(callback(
-  //     this, &mbed_hall_driven_motor::fall_2)); // attach increment function of
-  //                                                 // this counter instance
-  // _interrupt_count_2.rise(callback(
-  //     this, &mbed_hall_driven_motor::rise_2)); // attach increment function of
-  //                                                 // this counter instance
+  _interrupt_count_2.fall(callback(
+      this, &mbed_hall_driven_motor::fall_2)); // attach increment function of
+                                                  // this counter instance
+  _interrupt_count_2.rise(callback(
+      this, &mbed_hall_driven_motor::rise_2)); // attach increment function of
+                                                  // this counter instance
   
    _motor_shield_type = motor_shield_type.get();
   if (_motor_shield_type == 1)
