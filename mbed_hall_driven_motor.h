@@ -12,8 +12,7 @@
 class mbed_hall_driven_motor
 {
 public:
-  mbed_hall_driven_motor(PinName count_1_pin,
-                    PinName count_2_pin,
+  mbed_hall_driven_motor(int & count,
                     Stop_pin stop_pin,
                     mbed_PWMServoDriver &pwm,
                     Forward_or_dir_pin forward_or_dir_pin,
@@ -31,31 +30,27 @@ public:
                     Nb_tic_per_deg nb_tic_per_deg ,
                     End_stop_type end_stop_type);
 
-  // interruptions
-  void increment();
- void fall_1();
-  void fall_2();
-   void rise_2();
+ 
   // methodes
   void run();
   void init();
   void set_speed_sync(mbed_hall_driven_motor *pSynchronised_motor);
-  
+  double get_angle();  
   //variables
   int32_t _flag_start;
   int32_t _flag_stop;
   string _motor_name;
   double _deplacement;
   double _angle;
+
   double _start_angle;
   double _target;
   bool _debug_flag;
   double _debug_count_when_stoped; 
- volatile int  _count;
+  int  *_count;
 
 private:
-  InterruptIn _interrupt_count_1;
-  InterruptIn _interrupt_count_2;
+
   DigitalIn _DigitalIn_stop;
   mbed_PWMServoDriver *_pwm;
 

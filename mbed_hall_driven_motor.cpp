@@ -20,8 +20,7 @@
     PullUp            = 1,
     PullDown          = 2,
  */ /**/
-mbed_hall_driven_motor::mbed_hall_driven_motor(PinName count_1_pin,
-                                               PinName count_2_pin,
+mbed_hall_driven_motor::mbed_hall_driven_motor( int & count,
                                                Stop_pin stop_pin,
                                                mbed_PWMServoDriver &pwm,
                                                Forward_or_dir_pin forward_or_dir_pin,
@@ -38,26 +37,12 @@ mbed_hall_driven_motor::mbed_hall_driven_motor(PinName count_1_pin,
                                                Coef_Kd coef_Kd,
                                                Nb_tic_per_deg nb_tic_per_deg,
                                                End_stop_type end_stop_type)
-    : _interrupt_count_1(count_1_pin, PullDown),_interrupt_count_2(count_2_pin, PullDown),
-      _DigitalIn_stop(stop_pin.get(), PullNone),
+    :_DigitalIn_stop(stop_pin.get(), PullNone),
       _pwm(&pwm),
       _PID(&Input, &Output, &Setpoint, coef_Kp.get(), coef_Ki.get(), coef_Kd.get(), P_ON_E, DIRECT)
 
 {
 
-  // create the InterruptIn on the pin specified to Counter
-  _interrupt_count_1.rise(callback( this, &mbed_hall_driven_motor::increment)); // attach increment function of
-                                                                               // this counter instance
-  _interrupt_count_1.fall(callback(
-      this, &mbed_hall_driven_motor::fall_1)); // attach increment function of
-                                                  // this counter instance
-
-  _interrupt_count_2.fall(callback(
-      this, &mbed_hall_driven_motor::fall_2)); // attach increment function of
-                                                  // this counter instance
-  _interrupt_count_2.rise(callback(
-      this, &mbed_hall_driven_motor::rise_2)); // attach increment function of
-                                                  // this counter instance
   
    _motor_shield_type = motor_shield_type.get();
   if (_motor_shield_type == 1)
@@ -82,58 +67,11 @@ mbed_hall_driven_motor::mbed_hall_driven_motor(PinName count_1_pin,
 _end_stop_type = end_stop_type.get();
   // définit la valeur par défaut
   _debug_flag = false;
-  timer.start();
-previous_time= timer.read_us();
+ _count = &count;
  
 
 }
-
-//****************** interruptions
-/*principe:
-il y a 2 compteurs 1 et 2
-on dit compteur 1 rise = 0 / fall = 10
-on dit compteur 2 rise = 21 / fall = 20
-
-seul le compteur 1 rise augmente le compteur
-dans le sens aller, on doit avoir la trame :  0 -> 21 -> 10 -> 20 =>  51
-dans le sens retour, on doit avoir la trame : 0 -> 20 -> 10 -> 21 =>  51
-
-*/
-void mbed_hall_driven_motor::fall_1()
-{
-      if (tic_forward==21) {tic_forward=31; };
-      if (tic_backward==20) {tic_backward=30; };
-}
-void mbed_hall_driven_motor::fall_2()
-{
-   if (tic_forward==31) {tic_forward=51; };
-   if (tic_backward==0) {tic_backward=20; };
-     
-}
-
-void mbed_hall_driven_motor::rise_2()
-{
-   if (tic_forward==0) {tic_forward=21 ;};
-   if (tic_backward==30) {tic_backward=51; };
-     
-}
-
-void mbed_hall_driven_motor::increment()
-{
-      //on est arrivé a bout de la trame, on incremente le compteur
-      if (tic_forward==51){_count++;};
-      if (tic_backward==51){_count--;};
-      
-      //si le compteur a été incrémenté, on remet tout a zéro
-      if (tic_forward==51 || tic_backward==51)
-      {
-            // met à jour l'angle du moteur
-          _angle = _count / _nb_tic_per_deg;
-          //RAZ des tic
-          tic_forward =0;
-          tic_backward =0;  
-      }
-}
+ 
 
 //********************** methodes publiques
 
@@ -179,16 +117,16 @@ ThisThread::sleep_for(chrono::milliseconds(1000)); // on attend une seconde pour
   previous_speed = 0;
 
   _flag_speed_sync = false;
-  _count = 0;
+  *_count = 0;
   _debug_count_when_stoped=0;
-  _angle = 0;
+  //_angle = 0;
   _sens = true;
   _PID.SetOutputLimits(_min_speed, _max_speed);
   _PID.SetMode(1);
  // on ne compte plus pour éviter de compter les interférences
 _flag_is_running=false;
   // log
-  printf("fin init %s count %f\n", _motor_name.c_str(),_count);
+  printf("fin init %s count %f\n", _motor_name.c_str(),*_count);
 }
 
 void mbed_hall_driven_motor::set_speed_sync(mbed_hall_driven_motor *pSynchronised_motor)
@@ -208,8 +146,8 @@ void mbed_hall_driven_motor::run()
 {
 // on met le flag _flag_is_running pour démarrer le compteur
 _flag_is_running=true;
-  _deplacement = _target - _angle; // au demarrage on calcul le deplacement pour la synchro
-  _start_angle = _angle;           // on enregistre la position des moteurs liés au demarrage
+  _deplacement = _target - get_angle(); // au demarrage on calcul le deplacement pour la synchro
+  _start_angle = get_angle();           // on enregistre la position des moteurs liés au demarrage
   previous_speed = 0;
 
   if (_debug_flag)
@@ -221,10 +159,10 @@ _flag_is_running=true;
 
   double target_count = _target * _nb_tic_per_deg; // calcul la target en nombre de tic
 
-  if ((target_count - _count) > 0)
+  if ((target_count - *_count) > 0)
   {
     // on recule
-    while (target_count > _count)
+    while (target_count > *_count)
     {
       // calcul de la vitesse à chaque tour
       int speed = get_speed(target_count);
@@ -239,7 +177,7 @@ _flag_is_running=true;
   else
   {
     // on avance
-    while (target_count < _count)
+    while (target_count < *_count)
     {
       // calcul de la vitesse à chaque tour
       int speed = get_speed(target_count);
@@ -255,7 +193,7 @@ _flag_is_running=true;
   motor_stop();
   if (_debug_flag)
   {
-    printf("fin target moteur : angle %f\n", _angle);
+    printf("fin target moteur : angle %f\n", get_angle());
   }
   // on ne compte plus pour éviter de compter les interférences
 _flag_is_running=false;
@@ -267,10 +205,10 @@ int mbed_hall_driven_motor::get_speed(double target)
 
   // calcul de la vitesse avec le PID
   Setpoint = 0;                  // SetPoint pour le PID
-  Input = -abs(target - _count); // Input pour le PID
+  Input = -abs(target - *_count); // Input pour le PID
   double speed;
   // le PID demarre à 1500 de la target.
-  if (abs(target - _count) < 1500)
+  if (abs(target - *_count) < 1500)
   {
     _PID.Compute(); // le PID calcule la vitesse et commence a prendre en compte les valeurs pour l'intégrale
     speed = Output;
@@ -297,8 +235,8 @@ int mbed_hall_driven_motor::get_speed(double target)
   {
     printf("get_speed target %i\t", (int)(target));
     printf("speed %i\t", (int)(speed));
-    printf("count %i\t", (int)(_count));
-    printf("angle %f\t", (_angle));
+    printf("count %i\t", (int)(*_count));
+    printf("angle %f\t", (get_angle()));
     printf("speed_coef %f\t", (speed_coef));
   }
 
@@ -346,8 +284,8 @@ double mbed_hall_driven_motor::get_speed_coef(double pTarget)
       // on doit avoir (move_angle_current_motor)  = (move_angle_linked_motor )*deplacement/linked_deplacement
       // err_angle = (move_angle_current_motor)  - (move_angle_linked_motor )*deplacement/linked_deplacement
       coef_angle = _deplacement / (synchronised_motor_list[i]->_deplacement);
-      move_angle_linked_motor = synchronised_motor_list[i]->_angle - synchronised_motor_list[i]->_start_angle;
-      move_angle_current_motor = _angle - _start_angle;
+      move_angle_linked_motor = synchronised_motor_list[i]->get_angle() - synchronised_motor_list[i]->_start_angle;
+      move_angle_current_motor = get_angle() - _start_angle;
       err_angle = move_angle_current_motor - ((move_angle_linked_motor * coef_angle));
 
       if (_debug_flag)
@@ -358,11 +296,11 @@ double mbed_hall_driven_motor::get_speed_coef(double pTarget)
         printf(" err_angle = %f  ", err_angle);
       };
 
-      // backward (pTarget > _count)  => quand l'angle augmente et que l'angle est plus petit que l'angle lié, on est en retard -> donc pas de speed_coef
+      // backward (pTarget > *_count)  => quand l'angle augmente et que l'angle est plus petit que l'angle lié, on est en retard -> donc pas de speed_coef
       //  dans ce sens si l'erreur est positive, on ralenti, si elle est negative on ne fait rien
 
       // forward =>  c'est l'inverse, on dit que err_angle=-err_angle pour applique la même mecanique
-      if (pTarget < (_count))
+      if (pTarget < (*_count))
       {
         err_angle = -err_angle;
       };
@@ -452,4 +390,9 @@ void mbed_hall_driven_motor::motor_stop()
     _pwm->setPWM(_forward_pin, 0, 0);
     _pwm->setPWM(_backward_pin, 0, 0);
   }
+}
+double mbed_hall_driven_motor::get_angle()
+{
+  _angle = *_count / _nb_tic_per_deg;
+  return _angle;
 }
