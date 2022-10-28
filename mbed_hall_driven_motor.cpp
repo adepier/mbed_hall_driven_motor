@@ -393,6 +393,6 @@ void mbed_hall_driven_motor::motor_stop()
 }
 double mbed_hall_driven_motor::get_angle()
 {
-  _angle = *_count / _nb_tic_per_deg;
-  return _angle;
+  angle = *_count / _nb_tic_per_deg;
+  return angle;
 }

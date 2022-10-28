@@ -41,7 +41,7 @@ public:
   int32_t _flag_stop;
   string _motor_name;
   double _deplacement;
-  double _angle;
+  double angle;
 
   double _start_angle;
   double _target;
