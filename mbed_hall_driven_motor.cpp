@@ -149,7 +149,7 @@ _flag_is_running=true;
   _deplacement = _target - get_angle(); // au demarrage on calcul le deplacement pour la synchro
   _start_angle = get_angle();           // on enregistre la position des moteurs liés au demarrage
   previous_speed = 0;
-
+_PID.Compute(true); // on redemarre le pid
   if (_debug_flag)
   {
     printf("start run \n");
