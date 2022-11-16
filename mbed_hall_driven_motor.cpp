@@ -2,8 +2,7 @@
 
 /*!
  *  @brief constructeur
- *  @param count_1_pin
- *  @param count_2_pin
+ *  @param count
  *  @param stop_pin
  *  @param pwm
  *  @param forward_pin
@@ -111,20 +110,17 @@ void mbed_hall_driven_motor::init()
   motor_stop(); // on arrete le moteur
   //_DigitalIn_stop.disable_irq(); // --> on eteint la lecture de la butée
 
-ThisThread::sleep_for(chrono::milliseconds(1000)); // on attend une seconde pour stabiliser le moteur
+//ThisThread::sleep_for(chrono::milliseconds(1000)); // on attend une seconde pour stabiliser le moteur
 
   // on initialise les variables
   previous_speed = 0;
 
   _flag_speed_sync = false;
   *_count = 0;
-  _debug_count_when_stoped=0;
-  //_angle = 0;
-  _sens = true;
+  _debug_count_when_stoped=0; 
   _PID.SetOutputLimits(_min_speed, _max_speed);
   _PID.SetMode(1);
- // on ne compte plus pour éviter de compter les interférences
-_flag_is_running=false;
+
   // log
   printf("fin init %s count %f\n", _motor_name.c_str(),*_count);
 }
@@ -144,12 +140,13 @@ void mbed_hall_driven_motor::set_speed_sync(mbed_hall_driven_motor *pSynchronise
 
 void mbed_hall_driven_motor::run()
 {
-// on met le flag _flag_is_running pour démarrer le compteur
-_flag_is_running=true;
+
   _deplacement = _target - get_angle(); // au demarrage on calcul le deplacement pour la synchro
   _start_angle = get_angle();           // on enregistre la position des moteurs liés au demarrage
   previous_speed = 0;
-_PID.Compute(true); // on redemarre le pid
+  _PID.Compute(true); // on redemarre le pid
+  double target_count = _target * _nb_tic_per_deg; // calcul la target en nombre de tic
+  
   if (_debug_flag)
   {
     printf("start run \n");
@@ -157,7 +154,7 @@ _PID.Compute(true); // on redemarre le pid
     printf("start_angle: %f\n", _start_angle);
   };
 
-  double target_count = _target * _nb_tic_per_deg; // calcul la target en nombre de tic
+  
 
   if ((target_count - *_count) > 0)
   {
@@ -195,8 +192,7 @@ _PID.Compute(true); // on redemarre le pid
   {
     printf("fin target moteur : angle %f\n", get_angle());
   }
-  // on ne compte plus pour éviter de compter les interférences
-_flag_is_running=false;
+ 
 }
 //********************** methodes privées
 
@@ -265,7 +261,7 @@ double mbed_hall_driven_motor::get_speed_coef(double pTarget)
   // à 2 degrès on stop le moteur
   double speed_coef_final = 1;
   double speed_coef = 1;
-  double Nb_deg_autorise = 1;
+  double Nb_deg_autorise = 2;
 
   double move_angle_linked_motor;
   double move_angle_current_motor;
@@ -337,8 +333,7 @@ double mbed_hall_driven_motor::get_speed_coef(double pTarget)
 
 void mbed_hall_driven_motor::motor_run_forward(double speed)
 {
-
-  _sens = false; // false = forward / true = backward
+ 
   // la vitesse max est 4095
   if (speed > 4095)
   {
@@ -359,7 +354,7 @@ void mbed_hall_driven_motor::motor_run_forward(double speed)
 }
 void mbed_hall_driven_motor::motor_run_backward(double speed)
 {
-  _sens = true  ; // false = forward / true = backward
+  
   // la vitesse max est 4095
   if (speed > 4095)
   {
