@@ -36,7 +36,7 @@ mbed_hall_driven_motor::mbed_hall_driven_motor( int & count,
                                                Coef_Kd coef_Kd,
                                                Nb_tic_per_deg nb_tic_per_deg,
                                                End_stop_type end_stop_type)
-    :_DigitalIn_stop(stop_pin.get(), PullNone),
+    :_DigitalIn_stop(stop_pin.get(), PullDown),
       _pwm(&pwm),
       _PID(&Input, &Output, &Setpoint, coef_Kp.get(), coef_Ki.get(), coef_Kd.get(), P_ON_E, DIRECT)
 
