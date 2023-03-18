@@ -28,7 +28,8 @@ public:
                     Coef_Ki coef_Ki,
                     Coef_Kd coef_Kd,
                     Nb_tic_per_deg nb_tic_per_deg ,
-                    End_stop_type end_stop_type);
+                    End_stop_type end_stop_type,
+                    bool reverse_rotation);
 
  
   // methodes
@@ -46,6 +47,7 @@ public:
   double _start_angle;
   double _target;
   bool _debug_flag;
+  bool _reverse_rotation;
   double _debug_count_when_stoped; 
   int  *_count;
 

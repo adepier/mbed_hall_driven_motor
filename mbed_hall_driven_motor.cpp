@@ -35,7 +35,8 @@ mbed_hall_driven_motor::mbed_hall_driven_motor( int & count,
                                                Coef_Ki coef_Ki,
                                                Coef_Kd coef_Kd,
                                                Nb_tic_per_deg nb_tic_per_deg,
-                                               End_stop_type end_stop_type)
+                                               End_stop_type end_stop_type,
+                                               bool reverse_rotation)
     :_DigitalIn_stop(stop_pin.get(), PullDown),
       _pwm(&pwm),
       _PID(&Input, &Output, &Setpoint, coef_Kp.get(), coef_Ki.get(), coef_Kd.get(), P_ON_E, DIRECT)
@@ -66,6 +67,7 @@ mbed_hall_driven_motor::mbed_hall_driven_motor( int & count,
 _end_stop_type = end_stop_type.get();
   // définit la valeur par défaut
   _debug_flag = false;
+  _reverse_rotation= reverse_rotation;
  _count = &count;
  
 
@@ -339,17 +341,33 @@ void mbed_hall_driven_motor::motor_run_forward(double speed)
   {
     speed = 4095;
   }
+if(_reverse_rotation){
+     if (_motor_shield_type == 1)
+  {
 
+    _pwm->setPWM(_pwm_pin, 0, int(speed));
+    _pwm->setPWM(_dir_pin, 0, 0);
+  }
+
+  if (_motor_shield_type == 2)
+  {
+    _pwm->setPWM(_forward_pin, 0, 0);
+    _pwm->setPWM(_backward_pin, 0, int(speed));
+  }}
+    else{
   if (_motor_shield_type == 1)
   {
-    _pwm->setPWM(_pwm_pin, 0, int(speed));
-    _pwm->setPWM(_dir_pin, 0, 4095);
+    
+      _pwm->setPWM(_pwm_pin, 0, int(speed));
+      _pwm->setPWM(_dir_pin, 0, 4095);
+    
   }
 
   if (_motor_shield_type == 2)
   {
     _pwm->setPWM(_forward_pin, 0, int(speed));
     _pwm->setPWM(_backward_pin, 0, 0);
+  }
   }
 }
 void mbed_hall_driven_motor::motor_run_backward(double speed)
@@ -360,8 +378,24 @@ void mbed_hall_driven_motor::motor_run_backward(double speed)
   {
     speed = 4095;
   }
+  if(_reverse_rotation){
+         if (_motor_shield_type == 1)
+  {
+    
+      _pwm->setPWM(_pwm_pin, 0, int(speed));
+      _pwm->setPWM(_dir_pin, 0, 4095);
+    
+  }
+
+  if (_motor_shield_type == 2)
+  {
+    _pwm->setPWM(_forward_pin, 0, int(speed));
+    _pwm->setPWM(_backward_pin, 0, 0);
+  }}
+    else{
   if (_motor_shield_type == 1)
   {
+
     _pwm->setPWM(_pwm_pin, 0, int(speed));
     _pwm->setPWM(_dir_pin, 0, 0);
   }
@@ -371,6 +405,7 @@ void mbed_hall_driven_motor::motor_run_backward(double speed)
     _pwm->setPWM(_forward_pin, 0, 0);
     _pwm->setPWM(_backward_pin, 0, int(speed));
   }
+    }
 }
 void mbed_hall_driven_motor::motor_stop()
 {
