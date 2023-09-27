@@ -13,7 +13,7 @@ class mbed_hall_driven_motor
 {
 public:
   mbed_hall_driven_motor(int & count,
-                    Stop_pin stop_pin,
+                    DigitalIn &stop_pin,
                     mbed_PWMServoDriver &pwm,
                     Forward_or_dir_pin forward_or_dir_pin,
                     Backward_or_speed_pin backward_or_speed_pin,
@@ -28,16 +28,21 @@ public:
                     Coef_Ki coef_Ki,
                     Coef_Kd coef_Kd,
                     Nb_tic_per_deg nb_tic_per_deg ,
-                    End_stop_type end_stop_type,
+                    // End_stop_type end_stop_type,
                     bool reverse_rotation);
 
  
   // methodes
   void run();
   void init();
+  void init_position();  
   void set_speed_sync(mbed_hall_driven_motor *pSynchronised_motor);
   double get_angle();  
-  //variables
+  void motor_run_forward(double speed);
+  void motor_run_backward(double speed);
+  void motor_stop();
+  
+    //variables
   int32_t _flag_start;
   int32_t _flag_stop;
   string _motor_name;
@@ -47,13 +52,16 @@ public:
   double _start_angle;
   double _target;
   bool _debug_flag;
+  int mouvement_type; //0:default, amortisseur au demarrage et PID à l'arrivée - 1 : amortisseur au demarrage, SANS PID à l'arrivée,- 2 : SANS amortisseur au demarrage, avec PID à l'arrivée
   bool _reverse_rotation;
   double _debug_count_when_stoped; 
   int  *_count;
 
+
+  
 private:
 
-  DigitalIn _DigitalIn_stop;
+  DigitalIn *_DigitalIn_stop;
   mbed_PWMServoDriver *_pwm;
 
   int _backward_pin;
@@ -88,9 +96,7 @@ private:
   // int _cmde_flag_start;
   // int _cmde_flag_stop;
   int _motor_shield_type;
-  void motor_run_forward(double speed);
-  void motor_run_backward(double speed);
-  void motor_stop();
+
   int get_speed(double target);
   double get_speed_coef(double pTarget); 
   PID _PID;
