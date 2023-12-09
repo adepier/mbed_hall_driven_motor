@@ -11,11 +11,10 @@
 //using Stop_pin = fluent::NamedType<PinName, struct Stop_pinTag>;                           //pin de fin de course
 using Forward_or_dir_pin = fluent::NamedType<int, struct Forward_or_dir_pinTag>;       //pin de commande de la direction du moteur
 using Backward_or_speed_pin = fluent::NamedType<int, struct Backward_or_speed_pinTag>; //pin de commande de la vitesse du moteur
-using Motor_name = fluent::NamedType<std::string, struct Motor_nameTag>;                   //nom du moteur
-using Motor_shield_type = fluent::NamedType<std::int8_t, struct Motor_shield_typeTag>;        //motor_shield_type:1=type dir/speed -- 2=type Forward/backward
+using Motor_name = fluent::NamedType<std::string, struct Motor_nameTag>;                   //nom du moteur 
 using Flag_start = fluent::NamedType<std::int32_t, struct Flag_startTag>;                  //numéro du flag start
 using Flag_stop = fluent::NamedType<std::int32_t, struct Flag_stopTag>;                    //numéro du flag stop 
-using Init_speed = fluent::NamedType<std::int32_t, struct Init_speedTag>;                      //vitesse pour l'initialisation
+
 using Min_speed = fluent::NamedType<std::int32_t, struct Min_speedTag>;                        //vitesse mini
 using Max_speed = fluent::NamedType<std::int32_t, struct Max_speedTag>;                        //vitesse maxi
 using Coef_Kp = fluent::NamedType< double, struct Coef_KpTag>;                         //PID coef proportionnel
@@ -39,11 +38,9 @@ using Nb_tic_per_deg = fluent::NamedType< double, struct Nb_tic_per_degTag>;    
 //static const Stop_pin::argument stop_pin;
 static const Forward_or_dir_pin::argument forward_or_dir_pin;
 static const Backward_or_speed_pin::argument backward_or_speed_pin;
-static const Motor_name::argument motor_name;
-static const Motor_shield_type::argument motor_shield_type;
+static const Motor_name::argument motor_name; 
 static const Flag_start::argument flag_start;
 static const Flag_stop::argument flag_stop;
-static const Init_speed::argument init_speed;
 static const Min_speed::argument min_speed;
 static const Max_speed::argument max_speed;
 static const Coef_Kp::argument coef_Kp;

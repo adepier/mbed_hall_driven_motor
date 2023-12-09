@@ -17,11 +17,9 @@ public:
                     mbed_PWMServoDriver &pwm,
                     Forward_or_dir_pin forward_or_dir_pin,
                     Backward_or_speed_pin backward_or_speed_pin,
-                    Motor_name motor_name,
-                    Motor_shield_type motor_shield_type,
+                    Motor_name motor_name, 
                     Flag_start flag_start,
-                    Flag_stop flag_stop,
-                    Init_speed init_speed,
+                    Flag_stop flag_stop, 
                     Min_speed min_speed,
                     Max_speed max_speed,
                     Coef_Kp coef_Kp,
@@ -52,7 +50,13 @@ public:
   double _start_angle;
   double _target;
   bool _debug_flag;
-  int mouvement_type; //0:default, amortisseur au demarrage et PID à l'arrivée - 1 : amortisseur au demarrage, SANS PID à l'arrivée,- 2 : SANS amortisseur au demarrage, avec PID à l'arrivée
+  
+  bool flag_pid_enable;
+ bool flag_start_smooth_enable;
+ int speed_manual_run_forward;
+ int speed_manual_run_backward;
+ int flag_manual_stop;
+
   bool _reverse_rotation;
   double _debug_count_when_stoped; 
   int  *_count;
@@ -64,8 +68,7 @@ private:
   DigitalIn *_DigitalIn_stop;
   mbed_PWMServoDriver *_pwm;
 
-  int _backward_pin;
-  int _forward_pin;
+ 
   int _dir_pin;
   int _pwm_pin;
   bool _sens;
@@ -83,8 +86,7 @@ private:
 
   double previous_speed;
 
-  double _nb_tic_per_deg;
-  int _init_speed;
+  double _nb_tic_per_deg; 
   double Input;
   double Output;
   double Setpoint;
@@ -94,8 +96,7 @@ private:
   int _end_stop_type;
 
   // int _cmde_flag_start;
-  // int _cmde_flag_stop;
-  int _motor_shield_type;
+  // int _cmde_flag_stop; 
 
   int get_speed(double target);
   double get_speed_coef(double pTarget); 
