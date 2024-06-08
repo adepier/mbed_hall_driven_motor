@@ -33,7 +33,8 @@ mbed_hall_driven_motor::mbed_hall_driven_motor( int & count,
                                                Coef_Kd coef_Kd,
                                                Nb_tic_per_deg nb_tic_per_deg,
                                               //  End_stop_type end_stop_type,
-                                               bool reverse_rotation)
+                                               bool reverse_rotation
+                                               ,int coef_accel)
     :_DigitalIn_stop(&stop_pin),
       _pwm(&pwm),
       _PID(&Input, &Output, &Setpoint, coef_Kp.get(), coef_Ki.get(), coef_Kd.get(), P_ON_E, DIRECT)
@@ -50,11 +51,10 @@ mbed_hall_driven_motor::mbed_hall_driven_motor( int & count,
   _min_speed = min_speed.get();
   _max_speed = max_speed.get();
   _nb_tic_per_deg = nb_tic_per_deg.get(); 
-
- flag_pid_enable = false;
- flag_start_smooth_enable = false;
- speed_manual_run_forward = 0;
- speed_manual_run_backward = 0;
+_coef_accel = coef_accel;
+ //flag_pid_enable = false;
+ //flag_start_smooth_enable = false;
+ speed_manual_run = 0; 
 
   _flag_start = flag_start.get();
   _flag_stop = flag_stop.get();
@@ -75,7 +75,7 @@ void mbed_hall_driven_motor::init()
   printf("init carte %s\n", _motor_name.c_str());
   
   // on initialise les variables
-  previous_speed = 0; 
+  //previous_speed = 0; 
   _flag_speed_sync = false;
   *_count = 0;
   _debug_count_when_stoped=0; 
@@ -123,16 +123,16 @@ void mbed_hall_driven_motor::init_position()
   motor_stop(); // on arrete le moteur 
   //_DigitalIn_stop->disable_irq(); // --> on eteint la lecture de la butée
 
-  ThisThread::sleep_for(chrono::milliseconds(1000)); // on attend une seconde pour stabiliser le moteur
+  ThisThread::sleep_for(chrono::milliseconds(500)); // on attend une seconde pour stabiliser le moteur
   //on bouge de 2 deg pour être assez loin de la butée
    while (*_count < abs((int) _nb_tic_per_deg)*2)
   {
     motor_run_backward(_min_speed);
   }
   motor_stop(); // on arrete le moteur 
-  ThisThread::sleep_for(chrono::milliseconds(1000)); // on attend une seconde pour stabiliser le moteur
+  ThisThread::sleep_for(chrono::milliseconds(500)); // on attend une seconde pour stabiliser le moteur
   // on initialise les variables
-  previous_speed = 0;
+  //previous_speed = 0;
 
   //_flag_speed_sync = false;
  
@@ -170,22 +170,20 @@ void mbed_hall_driven_motor::run()
 {
 
 //commandes manuelles
-
-if (speed_manual_run_backward > 0) { motor_run_backward(speed_manual_run_backward);
+//forward -> superieur à 0, backward -> inférieur à 0  
+if (speed_manual_run < 0) { motor_run_backward(- speed_manual_run );
                                     return;}
-if( speed_manual_run_forward > 0) { 
-                                    //si on est en butée on stop
-                                    if (_DigitalIn_stop->read() == 0   ) {motor_stop();
-                                                                          flag_manual_stop = 1;
-                                                                          return;
-                                                                        } 
-                                    motor_run_forward(speed_manual_run_forward);
-                                    return; }
+if( speed_manual_run > 0) { //si on est en butée on stop
+                            if (_DigitalIn_stop->read() == 0   ) {motor_stop(); 
+                                                                  return;
+                                                                } 
+                            motor_run_forward(speed_manual_run);
+                            return; }
  //printf("motor run auto\n"); 
 // deplacement avec une target
   _deplacement = _target - get_angle(); // au demarrage on calcul le deplacement pour la synchro
   _start_angle = get_angle();           // on enregistre la position des moteurs liés au demarrage
-  previous_speed = 0;
+  previous_speed = _min_speed;
   _PID.Compute(true); // on redemarre le pid
   double target_count = _target * _nb_tic_per_deg; // calcul la target en nombre de tic
   
@@ -213,7 +211,7 @@ if( speed_manual_run_forward > 0) {
   };
   // stop quand le compteur est arrivé
    motor_stop();
-  flag_manual_stop = 1;   //le flag flag_manual_stop stop le thread               
+   _deplacement = 0;           
   if (_debug_flag)  { printf("fin target moteur : angle %f\n", get_angle()); }
  
 }
@@ -242,18 +240,28 @@ int mbed_hall_driven_motor::get_speed(double target)
     _PID.Compute(true); // on fait calculer le PID en reinitialisant la période de temp
     speed = Output;     // le PID calcule la vitesse et sans a prendre en compte le temp pour l'intégrale
   }
- 
+  // //pour les 2 premier degrès on commence au min
+  // if  ((_start_angle - get_angle()) < 2 && speed == _max_speed){
+  //   if (speed > previous_speed + 10 ) { speed = previous_speed + 10; }
+  // } ;  
+
   //si le pid est desactivé flag_pid_enable == false, on ne ralentit pas
-  // cela permet de ne pas avoir d'arret quand il y a plusieurs étapes
-  
-  if (flag_pid_enable == false  ){speed = _max_speed;} //SANS PID 
+  // cela permet de ne pas avoir d'arret quand il y a plusieurs étapes 
+
+  //if (flag_pid_enable == false  ){speed = _max_speed;} //SANS PID 
 
   double speed_coef = 1; 
   if (_flag_speed_sync) { speed_coef = get_speed_coef(target); }
-
+  // pour ne pas demarrer trop vite, on n'augmente pas la vitesse de plus de 10 par cycle
+   
+   if (speed_coef == 1)
+   {
+    if (speed > previous_speed + _coef_accel ) { speed = previous_speed + _coef_accel; }
+    }
   // on applique le coeficient le plus petit pour la synchro avec la vitesse 
-  speed = speed * speed_coef;
 
+  speed = speed * speed_coef;
+ 
   // debug
   if (_debug_flag)
   {
@@ -267,23 +275,28 @@ int mbed_hall_driven_motor::get_speed(double target)
   // pour ne pas demarrer trop vite, on n'augmente pas la vitesse de plus de 100 par cycle
   //quand il sont synchro, uniquement sur le moteur qui a le plus grand déplacement
    
-  int max_deplacement = 0 ;
-  string max_deplacement_motor_name ;
-  for (int i = 0; i < Nb_Motor_sync; i++)
-  { 
-    if (max_deplacement < synchronised_motor_list[i]->_deplacement ) {
-      max_deplacement = synchronised_motor_list[i]->_deplacement ;
-      max_deplacement_motor_name = synchronised_motor_list[i]->_motor_name;  
-      } 
-  }
+  // int max_deplacement = 0 ;
+  // std::string max_deplacement_motor_name ;
+  // for (int i = 0; i < Nb_Motor_sync; i++)
+  // { 
+  //   if (max_deplacement < abs(synchronised_motor_list[i]->_deplacement) ) {
+  //     max_deplacement = abs(synchronised_motor_list[i]->_deplacement) ;
+  //     max_deplacement_motor_name = synchronised_motor_list[i]->_motor_name;  
+  //     //printf("max  %s  motor_name %s  \n",max_deplacement_motor_name.c_str(),_motor_name.c_str());
+  //     } 
+  // }
+    
     //si flag_start_smooth_enable = true
     // on met un amortisseur au demarrage
-    if (flag_start_smooth_enable == true  ){  
-      if (speed > previous_speed + 10 && _motor_name == max_deplacement_motor_name) 
-       { speed = previous_speed + 10; }
-    }
-
-  previous_speed = speed;
+    // if (flag_start_smooth_enable == true  ){  
+    // //if ( max_deplacement == abs(_deplacement)  )  
+    // //  {
+    //     if (speed > previous_speed + 10 ) { speed = previous_speed + 10; }
+    //    //}
+    // }
+if (speed!=0) {
+  previous_speed = speed;}
+  else {previous_speed = _min_speed;}
 
   return (int)speed;
 }
@@ -301,7 +314,7 @@ double mbed_hall_driven_motor::get_speed_coef(double pTarget)
 { 
   double speed_coef_final = 1;
   double speed_coef = 1;
-  double Nb_deg_autorise = 2;
+  double Nb_deg_autorise = 1;
 
   double move_angle_linked_motor;
   double move_angle_current_motor;
@@ -385,12 +398,11 @@ void mbed_hall_driven_motor::motor_run_backward(double speed)
 }
 
 void mbed_hall_driven_motor::motor_stop()
-{ 
+{ //on met a zero les commandes manuelles
+    speed_manual_run = 0; 
     _pwm->setPWM(_pwm_pin, 0, 0);
     _pwm->setPWM(_dir_pin, 0, 0);
-    //on met a zero les commandes manuelles
-    speed_manual_run_forward = 0;
-    speed_manual_run_backward = 0;
+    
     //printf("motor_stop\n");
 }
 double mbed_hall_driven_motor::get_angle()

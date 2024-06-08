@@ -27,7 +27,8 @@ public:
                     Coef_Kd coef_Kd,
                     Nb_tic_per_deg nb_tic_per_deg ,
                     // End_stop_type end_stop_type,
-                    bool reverse_rotation);
+                    bool reverse_rotation
+                    ,int coef_accel);
 
  
   // methodes
@@ -51,11 +52,10 @@ public:
   double _target;
   bool _debug_flag;
   
-  bool flag_pid_enable;
- bool flag_start_smooth_enable;
- int speed_manual_run_forward;
- int speed_manual_run_backward;
- int flag_manual_stop;
+  //bool flag_pid_enable;
+ //bool flag_start_smooth_enable;
+ int speed_manual_run ; //forward -> superieur à 0, backward -> inférieur à 0  
+ int _coef_accel; /*à la config pour la rampe d'acceleration au demarrage*/
 
   bool _reverse_rotation;
   double _debug_count_when_stoped; 
