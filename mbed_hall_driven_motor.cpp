@@ -18,6 +18,7 @@
     PullUp            = 1,
     PullDown          = 2,
  */ /**/
+
 mbed_hall_driven_motor::mbed_hall_driven_motor( int & count,
                                                DigitalIn &stop_pin,
                                                mbed_PWMServoDriver &pwm,
@@ -39,31 +40,28 @@ mbed_hall_driven_motor::mbed_hall_driven_motor( int & count,
       _pwm(&pwm),
       _PID(&Input, &Output, &Setpoint, coef_Kp.get(), coef_Ki.get(), coef_Kd.get(), P_ON_E, DIRECT)
 
-{
+{ 
+      _dir_pin = forward_or_dir_pin.get();
+      _pwm_pin = backward_or_speed_pin.get();
 
-  
-   
-    _dir_pin = forward_or_dir_pin.get();
-    _pwm_pin = backward_or_speed_pin.get();
-   
-  //   default value
-  _motor_name = motor_name.get(); 
-  _min_speed = min_speed.get();
-  _max_speed = max_speed.get();
-  _nb_tic_per_deg = nb_tic_per_deg.get(); 
-_coef_accel = coef_accel;
- //flag_pid_enable = false;
- //flag_start_smooth_enable = false;
- speed_manual_run = 0; 
+      //   default value
+      _motor_name = motor_name.get(); 
+      _min_speed = min_speed.get();
+      _max_speed = max_speed.get();
+      _nb_tic_per_deg = nb_tic_per_deg.get(); 
+      _coef_accel = coef_accel;
+      //flag_pid_enable = false;
+      //flag_start_smooth_enable = false;
+      speed_manual_run = 0; 
 
-  _flag_start = flag_start.get();
-  _flag_stop = flag_stop.get();
-// _end_stop_type = end_stop_type.get();
-  // définit la valeur par défaut
-  _debug_flag = false  ;
-  _reverse_rotation= reverse_rotation;
- _count = &count;
- 
+      _flag_start = flag_start.get();
+      _flag_stop = flag_stop.get();
+      // _end_stop_type = end_stop_type.get();
+      // définit la valeur par défaut
+      _debug_flag = false  ;
+      _reverse_rotation= reverse_rotation;
+      _count = &count; 
+
 
 }
  
@@ -82,7 +80,8 @@ void mbed_hall_driven_motor::init()
   _PID.SetOutputLimits(_min_speed, _max_speed);
   _PID.SetMode(1);
   // log
-  printf("fin init %s count %f\n", _motor_name.c_str(),*_count);
+  printf("fin init %s count %f  ", _motor_name.c_str(),*_count);
+  printf(" count_min: %i \n",    _count_min);
 }
 
 void mbed_hall_driven_motor::init_position()
@@ -107,9 +106,9 @@ void mbed_hall_driven_motor::init_position()
   motor_stop(); 
   if (_debug_flag)
   {
-    printf("stop %s : on attends une seconde pour stabiliser le moteur, interrupt: %i \n ", _motor_name.c_str(),_DigitalIn_stop->read());
+    printf("stop %s : on attends 100 milisecondes pour stabiliser le moteur, interrupt: %i \n ", _motor_name.c_str(),_DigitalIn_stop->read());
   };                                                 // on arrete le moteur
-  ThisThread::sleep_for(chrono::milliseconds(1000)); // on attend une seconde pour stabiliser le moteur
+  ThisThread::sleep_for(chrono::milliseconds(100)); // on attend 100 milisecondes pour stabiliser le moteur
  *_count = 0;
   // on repart tout doucement pour que l'init soit juste après la butée
   if (_debug_flag)
@@ -123,14 +122,14 @@ void mbed_hall_driven_motor::init_position()
   motor_stop(); // on arrete le moteur 
   //_DigitalIn_stop->disable_irq(); // --> on eteint la lecture de la butée
 
-  ThisThread::sleep_for(chrono::milliseconds(500)); // on attend une seconde pour stabiliser le moteur
+  ThisThread::sleep_for(chrono::milliseconds(100)); // on attend 100 milisecondes pour stabiliser le moteur
   //on bouge de 2 deg pour être assez loin de la butée
    while (*_count < abs((int) _nb_tic_per_deg)*2)
   {
     motor_run_backward(_min_speed);
   }
   motor_stop(); // on arrete le moteur 
-  ThisThread::sleep_for(chrono::milliseconds(500)); // on attend une seconde pour stabiliser le moteur
+  ThisThread::sleep_for(chrono::milliseconds(100)); // on attend 100 milisecondes pour stabiliser le moteur
   // on initialise les variables
   //previous_speed = 0;
 
@@ -142,9 +141,11 @@ void mbed_hall_driven_motor::init_position()
   // _PID.SetMode(1);
 
   // log
-  printf("fin init %s count %f\n", _motor_name.c_str(),*_count);
+  printf("fin init %s count %f  ", _motor_name.c_str(),*_count);
+  printf(" count_min: %i \n",    _count_min);
   //on stop le thread au cas ou
   //  flag_manual_stop = 1;
+  flag_init_done = true; // on indique que l'init est faite
 }
 
 void mbed_hall_driven_motor::set_speed_sync(mbed_hall_driven_motor *pSynchronised_motor)
@@ -174,9 +175,16 @@ void mbed_hall_driven_motor::run()
 if (speed_manual_run < 0) { motor_run_backward(- speed_manual_run );
                                     return;}
 if( speed_manual_run > 0) { //si on est en butée on stop
-                            if (_DigitalIn_stop->read() == 0   ) {motor_stop(); 
-                                                                  return;
-                                                                } 
+                            // si l'init n'est pas faite, on ne fait rien
+                            // sinon on arrete le moteur quand la butée est atteinte
+                            if(flag_init_done == true) {
+                              if (  *_count < (_count_min * _nb_tic_per_deg) ) {motor_stop();  
+                                                             return;
+                                                                    } 
+                                                                  }                                     
+                            // if (_DigitalIn_stop->read() == 0   ) {motor_stop(); 
+                            //                                       return;
+                            //                                     } 
                             motor_run_forward(speed_manual_run);
                             return; }
  //printf("motor run auto\n"); 

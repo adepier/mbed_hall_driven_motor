@@ -28,7 +28,7 @@ public:
                     Nb_tic_per_deg nb_tic_per_deg ,
                     // End_stop_type end_stop_type,
                     bool reverse_rotation
-                    ,int coef_accel);
+                    ,int coef_accel  );
 
  
   // methodes
@@ -60,6 +60,7 @@ public:
   bool _reverse_rotation;
   double _debug_count_when_stoped; 
   int  *_count;
+  int _count_min = 0; // valeur de la butée
 
 
   
@@ -74,6 +75,8 @@ private:
   bool _sens;
   int tic_forward=0;
   int tic_backward=0;
+  bool flag_init_done = false;
+  
   
   
   bool _flag_is_running;
